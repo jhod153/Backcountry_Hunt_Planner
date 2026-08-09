@@ -1,0 +1,16 @@
+{
+  "name": "Backcountry Hunt Planner",
+  "short_name": "Hunt Planner",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f3ea",
+  "theme_color": "#385343",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
