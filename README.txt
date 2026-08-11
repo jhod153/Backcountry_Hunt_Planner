@@ -29,3 +29,11 @@ Latest pack changes are included:
 - wax cubes quantity based
 - fuel size and quantity
 - squeeze bags, dry bags, game bags, AAA batteries quantity based
+
+
+GEAR LIBRARY ARCHITECTURE UPDATE
+- Master Gear Library: 137 starter products across 7 major backcountry hunting brands.
+- My Gear: current personal gear plus products added from the library.
+- Pack: remains organized by carrying/packing categories; product choices feed into pack weight.
+- Unverified library weights are visibly flagged and require a measured weight before they can replace a pack item.
+- Custom gear can be added directly to My Gear.
