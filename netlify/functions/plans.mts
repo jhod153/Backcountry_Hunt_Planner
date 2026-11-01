@@ -6,7 +6,8 @@ import { plans, collaborators } from '../../db/schema.js';
 export default async (req: Request) => {
   const reply = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
   const user = await getUser();
-  if (!user || !user.email || !user.confirmedAt) return reply({ error: 'Sign in with a confirmed email to access hunt plans.' }, 401);
+  // Identity verifies the session; verified JWT context may omit profile timestamps.
+  if (!user?.id || !user.email) return reply({ error: 'Sign in to access hunt plans.' }, 401);
   if (!['GET','POST','PUT','PATCH'].includes(req.method)) return reply({ error: 'Method not allowed.' }, 405);
   if (req.method !== 'GET') {
     const origin = req.headers.get('origin');
