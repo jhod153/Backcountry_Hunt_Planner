@@ -1,18 +1,19 @@
-import { login, signup, logout, getUser, handleAuthCallback, requestPasswordRecovery, updateUser, acceptInvite, onAuthChange } from '@netlify/identity';
+import { login, signup, logout, getUser, handleAuthCallback, requestPasswordRecovery, updateUser, acceptInvite, onAuthChange, refreshSession } from '@netlify/identity';
 const root=document.getElementById('accountPanel');
 const planner=window.huntPlanner;
 const draft=planner.snapshot();
-let user=null, current=null, list=[], baseline=JSON.stringify(draft), busy=false, mode='login', inviteToken=null;
+let user=null, current=null, list=[], baseline=JSON.stringify(draft), busy=false, mode='login', inviteToken=null, autosaveTimer=null, saveError=false, restoring=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const changed=()=>JSON.stringify(planner.snapshot())!==baseline;
 const message=(text,error=false)=>{const el=document.getElementById('accountMessage');if(el){el.textContent=text;el.classList.toggle('account-error',error)}};
 async function api(method='GET',body,id){
-  await getUser();
+  await refreshSession();
+  if(!await getUser())throw Error('Your session has expired. Sign in again to save your changes.');
   const res=await fetch('/.netlify/functions/plans'+(id?'?id='+encodeURIComponent(id):''),{method,credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
   const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed.');return data;
 }
 function render(){
-  root.innerHTML=`<div class="section-kicker">Hunt together</div><div class="account-heading"><h2>${user?'Your hunt plans':'Save your hunt. Bring your crew.'}</h2>${user?`<span class="muted">${esc(user.email)}</span>`:''}</div><p class="muted">${user?'Save your changes before leaving. Only you and the people you add can open a plan.':'Sign in to store plans across devices and edit them with selected people.'}</p><p id="accountMessage" role="status" aria-live="polite"></p>`;
+  root.innerHTML=`<div class="section-kicker">Hunt together</div><div class="account-heading"><h2>${user?'Your hunt plans':'Save your hunt. Bring your crew.'}</h2>${user?`<span class="muted">${esc(user.email)}</span>`:''}</div><p class="muted">${user?'Changes save automatically while you are signed in. Only you and the people you add can open a plan.':'Sign in to store plans across devices and edit them with selected people.'}</p><p id="accountMessage" role="status" aria-live="polite"></p>`;
   if(mode==='reset'||mode==='invite'){
     root.insertAdjacentHTML('beforeend',`<form id="resetForm" class="account-form"><label>New password<input class="field" name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="primary">Set password</button></form>`);
     document.getElementById('resetForm').onsubmit=e=>run(e,async()=>{const password=new FormData(e.target).get('password');if(mode==='invite')await acceptInvite(inviteToken,password);else await updateUser({password});mode='login';await hydrate();message('Password saved.');});return;
@@ -49,22 +50,48 @@ function confirmDiscard(action){
   document.getElementById('discardChanges').onclick=()=>run(null,action);
   document.getElementById('cancelDiscard').onclick=()=>box.replaceChildren();
 }
-async function open(id){
-  const plan=await api('GET',null,id);planner.restore(plan.data);current=plan;baseline=JSON.stringify(planner.snapshot());render();message('Latest plan opened.');
+function rememberPlan(id){const url=new URL(location.href);if(id)url.searchParams.set('plan',id);else url.searchParams.delete('plan');history.replaceState(null,'',url);}
+async function open(id,preserveEdits=false){
+  const plan=await api('GET',null,id);if(preserveEdits&&changed())return;planner.restore(plan.data);current=plan;baseline=JSON.stringify(planner.snapshot());saveError=false;rememberPlan(plan.id);render();message('Latest plan opened.');
 }
 async function save(copy){
+  saveError=false;
   const snapshot=planner.snapshot(),name=snapshot.state.huntName.trim();
   if(!name)throw Error('Enter a hunt name in Setup first.');
   const saved=await api(copy||!current?'POST':'PUT',{name,data:snapshot,version:current?.version},copy?null:current?.id);
-  current={...saved,members:copy?[]:current?.members||[]};baseline=JSON.stringify(snapshot);list=await api();render();message('Plan saved.');
+  current={...saved,members:copy?[]:current?.members||[]};baseline=JSON.stringify(snapshot);rememberPlan(saved.id);list=[{...saved},...list.filter(p=>p.id!==saved.id)];render();message('Plan saved.');
 }
 async function reloadMembers(){const plan=await api('GET',null,current.id);current.members=plan.members;render();}
-async function signOut(){await logout();user=null;current=null;list=[];planner.restore(draft);baseline=JSON.stringify(planner.snapshot());render();message('Signed out.');}
-async function hydrate(){const next=await getUser();if(user&&next?.id!==user.id){current=null;list=[];planner.restore(draft);baseline=JSON.stringify(planner.snapshot());}user=next;render();if(user){list=await api();render();}}
-async function run(e,fn){e?.preventDefault();if(busy)return;busy=true;root.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn()}catch(err){message(err.message||'Something went wrong. Please try again.',true)}finally{busy=false;root.querySelectorAll('button').forEach(b=>b.disabled=false);updateDirty();}}
-function updateDirty(){const el=document.getElementById('saveState');if(el)el.textContent=current?(changed()?'Unsaved changes':'All changes saved'):'Draft — save to keep this plan online.';}
-document.addEventListener('input',updateDirty);document.addEventListener('change',()=>setTimeout(updateDirty,0));document.addEventListener('click',()=>setTimeout(updateDirty,0));
-window.addEventListener('beforeunload',e=>{if(user&&changed()){e.preventDefault();e.returnValue='';}});
+async function signOut(){clearTimeout(autosaveTimer);await logout();rememberPlan(null);user=null;current=null;list=[];planner.restore(draft);baseline=JSON.stringify(planner.snapshot());render();message('Signed out.');}
+async function hydrate(){
+  const next=await getUser(), switched=user&&next?.id!==user.id;
+  if(switched){current=null;list=[];planner.restore(draft);baseline=JSON.stringify(planner.snapshot());rememberPlan(null);}
+  user=next;render();
+  if(user){
+    restoring=true;
+    try{
+      list=await api();
+      const id=new URL(location.href).searchParams.get('plan')||list.find(p=>p.ownerId===user.id)?.id;
+      if(!current&&!changed()&&id)await open(id,true);
+      else render();
+    }finally{restoring=false;}
+    scheduleAutosave();
+  }
+}
+async function run(e,fn){e?.preventDefault();if(busy)return;busy=true;root.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn()}catch(err){saveError=true;message(err.message||'Something went wrong. Please try again.',true)}finally{busy=false;root.querySelectorAll('button').forEach(b=>b.disabled=false);updateDirty();}}
+function updateDirty(){const el=document.getElementById('saveState');if(el)el.textContent=saveError?'Changes are not saved. Use Save to retry.':current?(changed()?'Unsaved changes — saving automatically…':'All changes saved'):'Draft — changes save automatically when you edit, or use Save this draft.';}
+function scheduleAutosave(){
+  clearTimeout(autosaveTimer);
+  if(!user||restoring||saveError||!changed())return;
+  autosaveTimer=setTimeout(()=>{
+    if(busy){scheduleAutosave();return;}
+    void run(null,()=>save(false)).then(()=>{if(!saveError&&changed())scheduleAutosave();});
+  },600);
+}
+function edited(){saveError=false;updateDirty();scheduleAutosave();}
+document.addEventListener('input',e=>{if(!root.contains(e.target))edited();});
+for(const event of ['change','click'])document.addEventListener(event,e=>{if(!root.contains(e.target))setTimeout(()=>{updateDirty();if(!saveError)scheduleAutosave();},0);});
+window.addEventListener('beforeunload',e=>{if(changed()){e.preventDefault();e.returnValue='';}});
 onAuthChange((event)=>{if(['logout','login','user_updated'].includes(event)&&!busy)void run(null,hydrate);});
 render();
 void run(null,async()=>{const result=await handleAuthCallback();if(result?.type==='recovery'||result?.type==='invite'){mode=result.type==='recovery'?'reset':'invite';inviteToken=result.token;user=await getUser();render();return;}await hydrate();});
