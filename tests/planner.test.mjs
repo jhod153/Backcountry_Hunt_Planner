@@ -41,3 +41,69 @@ test('imports contribute nutrition and weight, and profiles round-trip the entir
   assert.match(w.document.getElementById('gearLibraryResults').textContent, /Weight needed/);
   dom.window.close();
 });
+
+test('Pack offers custom gear, counts extra weight, and restores saved extras', () => {
+  const dom = new JSDOM(readFileSync('index.html', 'utf8'), { url: 'https://example.test', runScripts: 'outside-only' });
+  const w = dom.window;
+  w.eval(readFileSync('data.js', 'utf8')); w.eval(readFileSync('app.js', 'utf8'));
+  const original = w.huntPlanner.snapshot();
+  w.document.querySelector('#packAddGear').click();
+  w.document.querySelector('#showCustomForm').click();
+  w.document.querySelector('#customGearName').value = 'Spare repair kit';
+  w.document.querySelector('#customGearWeight').value = '500';
+  w.document.querySelector('#saveCustomGear').click();
+  const before = w.document.querySelector('#topMetrics').textContent;
+  const id = w.huntPlanner.snapshot().myGear.custom.at(-1).id;
+  w.document.querySelector(`.addPackGear[data-id="${id}"]`).click();
+  assert.notEqual(w.document.querySelector('#topMetrics').textContent, before);
+  assert.match(w.document.querySelector('#pack').textContent, /Spare repair kit/);
+  const saved = w.huntPlanner.snapshot();
+  w.huntPlanner.restore(original);
+  assert.equal(w.huntPlanner.snapshot().packExtras.length, 0);
+  w.huntPlanner.restore(saved);
+  assert.equal(w.huntPlanner.snapshot().packExtras[0], id);
+  w.document.querySelector('.removePackGear').click();
+  assert.equal(w.huntPlanner.snapshot().packExtras.length, 0);
+  w.document.querySelector('#days').value = '7';
+  w.document.querySelector('#days').dispatchEvent(new w.Event('change'));
+  assert.equal(w.huntPlanner.snapshot().days, 7);
+  dom.window.close();
+});
+
+test('older shared plans restore meals, gear, quantities, and shelter', () => {
+  const dom = new JSDOM(readFileSync('index.html', 'utf8'), { url: 'https://example.test', runScripts: 'outside-only' });
+  const w = dom.window;
+  w.eval(readFileSync('data.js', 'utf8')); w.eval(readFileSync('app.js', 'utf8'));
+  const original = w.huntPlanner.snapshot();
+  const { foods, bear, fuel, qty, ...state } = original;
+  state.huntName = 'November Mulie - 5 Days';
+  state.shelter = 'cimarron';
+  state.menus[0]['Breakfast::0'] = 2;
+  const legacy = { state, bear: { ...bear, enabled: true }, fuel, quantities: [0, 4, 4, 8, 6] };
+  w.huntPlanner.restore(legacy);
+  const restored = w.huntPlanner.snapshot();
+  assert.equal(restored.huntName, state.huntName);
+  assert.equal(restored.shelter, 'cimarron');
+  assert.equal(restored.menus[0]['Breakfast::0'], 2);
+  assert.equal(restored.bear.enabled, true);
+  assert.equal(JSON.stringify(restored.qty), JSON.stringify(legacy.quantities));
+  assert.equal(restored.foods.length, foods.length);
+  assert.throws(() => w.huntPlanner.restore({ menus: original.menus }), /incomplete/);
+  dom.window.close();
+});
+
+test('shared plan links select the existing hunt without replacing the open plan', async () => {
+  const dom = new JSDOM(readFileSync('index.html', 'utf8'), { url: 'https://example.test/?plan=a4650584-e14c-4e99-889c-6769047b9120', runScripts: 'outside-only' });
+  const w = dom.window;
+  const identity = { getUser: async () => ({ email: 'hunter@example.test' }), handleAuthCallback: async () => null, onAuthChange: () => {} };
+  w.testIdentity = identity;
+  w.fetch = async () => ({ ok: true, json: async () => ({ hunts: [{ id: 'a4650584-e14c-4e99-889c-6769047b9120', name: 'November Mulie - 5 Days' }] }) });
+  let restored = false;
+  w.huntPlanner = { restore: () => { restored = true; } };
+  const script = readFileSync('account.js', 'utf8').replace("await import('https://esm.sh/@netlify/identity@2.0.0?bundle')", 'window.testIdentity');
+  await w.eval('(async () => {' + script + '})()');
+  assert.equal(w.document.querySelector('#savedHunts').value, 'a4650584-e14c-4e99-889c-6769047b9120');
+  assert.match(w.document.querySelector('#accountMessage').textContent, /Load hunt/);
+  assert.equal(restored, false);
+  dom.window.close();
+});
