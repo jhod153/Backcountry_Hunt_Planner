@@ -1,5 +1,7 @@
 const $ = id => document.getElementById(id);
 let identity, user, activeId = null, inviteToken = null;
+const linkedPlanId = new URLSearchParams(location.search).get('plan');
+let linkedPlanSelected = false;
 const message = text => { $('accountMessage').textContent = text; };
 async function api(path = '', options = {}) {
   // Refresh the session before sending the cookie to the protected endpoint.
@@ -13,6 +15,13 @@ async function listHunts() {
   const { hunts } = await api();
   $('savedHunts').replaceChildren(new Option('Choose a hunt', ''), ...hunts.map(h => new Option(h.name, h.id)));
   if (activeId) $('savedHunts').value = activeId;
+  else if (linkedPlanId && !linkedPlanSelected) {
+    if (hunts.some(h => h.id === linkedPlanId)) {
+      $('savedHunts').value = linkedPlanId;
+      message('Your linked hunt is available. Select Load hunt to open it.');
+      linkedPlanSelected = true;
+    } else message('This linked hunt is not available in this account. Log in with the account that originally saved it.');
+  }
 }
 async function syncAccount() {
   user = await identity.getUser();
@@ -21,7 +30,10 @@ async function syncAccount() {
   $('accountToggle').classList.toggle('hidden', !!user);
   $('accountStatus').textContent = user ? `Signed in as ${user.email}` : 'Log in to save hunts across devices.';
   if (user) { $('accountForm').classList.add('hidden'); await listHunts(); }
-  else $('savedHunts').replaceChildren(new Option('Choose a hunt', ''));
+  else {
+    $('savedHunts').replaceChildren(new Option('Choose a hunt', ''));
+    if (linkedPlanId) message('Log in with the account that saved this hunt, then select Load hunt.');
+  }
 }
 async function busy(button, fn) {
   button.disabled = true;
@@ -32,7 +44,7 @@ $('accountToggle').onclick = () => $('accountForm').classList.toggle('hidden');
 $('accountForm').onsubmit = e => { e.preventDefault(); busy(e.submitter, async () => {
   if (!identity) throw new Error('Account service is loading. Please retry.');
   await identity.login($('accountEmail').value, $('accountPassword').value);
-  $('accountPassword').value = ''; await syncAccount(); message('Logged in. Choose a saved hunt or save your current plan.');
+  $('accountPassword').value = ''; await syncAccount(); if (!linkedPlanId) message('Logged in. Choose a saved hunt or save your current plan.');
 }); };
 $('signup').onclick = e => busy(e.currentTarget, async () => {
   if (!$('accountForm').reportValidity()) return;
