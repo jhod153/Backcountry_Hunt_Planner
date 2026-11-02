@@ -38,6 +38,17 @@
       <div class="hero-landscape-photo" aria-hidden="true"></div>
     </section>
 
+    <section class="card account-card" aria-label="Account and saved hunts">
+      <div class="actions"><button id="accountToggle" class="secondary" type="button">Log in / Sign up</button><span id="accountStatus">Log in to save hunts across devices.</span></div>
+      <form id="accountForm" class="hidden account-fields">
+        <label>Email<input id="accountEmail" type="email" class="field" autocomplete="email" required></label>
+        <label>Password<input id="accountPassword" type="password" class="field" autocomplete="current-password" required minlength="8"></label>
+        <div class="actions"><button class="primary" type="submit">Log in</button><button id="signup" class="secondary" type="button">Create account</button><button id="forgotPassword" class="text-btn" type="button">Forgot password</button></div>
+      </form>
+      <form id="resetForm" class="hidden account-fields"><label>New password<input id="newPassword" class="field" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary">Set password</button></form>
+      <div id="huntControls" class="hidden account-fields"><label>Saved hunts<select id="savedHunts" class="field"><option value="">Choose a hunt</option></select></label><div class="actions"><button id="loadHunt" class="secondary" type="button">Load hunt</button><button id="saveHunt" class="primary" type="button">Save hunt</button><button id="saveNewHunt" class="secondary" type="button">Save as new hunt</button><button id="logout" class="text-btn" type="button">Log out</button></div><small>Save after making changes. “Save as new hunt” keeps the previous hunt.</small></div>
+      <p id="accountMessage" role="status" aria-live="polite"></p>
+    </section>
     <nav id="tabs" class="tabs"></nav>
     <div id="topMetrics" class="metrics"></div>
     <section id="setup" class="panel active"></section>
@@ -59,6 +70,9 @@
     </section>
   </div>
   <script src="data.js"></script>
+  <dialog id="productLookup" class="lookup-dialog"><div class="actions"><h2 id="lookupTitle">Find product</h2><button id="closeLookup" class="secondary" type="button">Close</button></div><form id="lookupForm" class="account-fields"><label>Product name<input id="lookupQuery" class="field" required minlength="3" maxlength="120"></label><button class="primary">Search</button></form><p id="lookupMessage" role="status" aria-live="polite"></p><div id="lookupResults"></div></dialog>
   <script src="app.js"></script>
+  <script type="module" src="account.js"></script>
+  <script src="product-lookup.js"></script>
 </body>
 </html>

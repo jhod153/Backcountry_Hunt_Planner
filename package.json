@@ -1,0 +1,32 @@
+{
+  "name": "backcountry-hunt-planner",
+  "version": "1.0.0",
+  "description": "Backcountry hunt planning with nutrition, gear weights, and saved hunt profiles",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck netlify/functions/*.mts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://x-access-token:ghs_13473_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJUQWoxRjZjUFJzcUotd2NzZkxOQ3BXSThxLWgtYWJ3SEVnQTQxU3NnZ2NWamU1T01melNlRW1nTDB3IiwiZXhwIjoxNzkzNTg5MzEwLCJpYXQiOjE3OTM1ODU3MTAsImlzcyI6ImdpdGh1YiIsImp0aSI6IjAyZWFlZjcwLWI2MGMtNGJhZi05ZGZhLTlmYzIwNmYwN2ZmZiIsInZlciI6M30.No5E0ZmqKJ40i-KccM64DMSAUsZBId0AAyPzn5Hnk_Fr6YQNRBkbdWeqZB2_e89nWxvBOhreE48YX3zCLQSHJQ@github.com/jhod153/Backcountry_Hunt_Planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jhod153/Backcountry_Hunt_Planner/issues"
+  },
+  "homepage": "https://github.com/jhod153/Backcountry_Hunt_Planner#readme",
+  "dependencies": {
+    "@netlify/database": "^2.0.1",
+    "@netlify/functions": "^6.0.3",
+    "@netlify/identity": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "jsdom": "^30.1.3",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}
