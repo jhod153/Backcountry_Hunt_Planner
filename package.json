@@ -1,0 +1,32 @@
+{
+  "name": "repo",
+  "version": "1.0.0",
+  "description": "Backcountry hunt planner",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check app.js && node --check product-search.js && tsc --noEmit --module nodenext --target es2022 --skipLibCheck netlify/functions/*.mts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://x-access-token:ghs_13473_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiI1X2ZZVlQ4RzZyVGZZUk9aZ2ZSTDhMS0xvemp5dWNnb2tQclNNOUEyWmlmVTAtR3o4clh1Y0ZpZU5RIiwiZXhwIjoxNzkzNTg4MjAzLCJpYXQiOjE3OTM1ODQ2MDMsImlzcyI6ImdpdGh1YiIsImp0aSI6ImRlOGJlYmMzLTllNzQtNDk5ZC04NzFjLTZhODk2Yjk3OGI3MyIsInZlciI6M30.9HjaZVTrjLgVDg9Ja94J8GaWLacpTwUqbyHnUgRp8OD1vSjImywAQeook0kvPvWTntkiP-r2mim-xN0y8YkWuw@github.com/jhod153/Backcountry_Hunt_Planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jhod153/Backcountry_Hunt_Planner/issues"
+  },
+  "homepage": "https://github.com/jhod153/Backcountry_Hunt_Planner#readme",
+  "dependencies": {
+    "@netlify/database": "^2.0.1",
+    "@netlify/functions": "^6.0.3",
+    "openai": "^7.47.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "jsdom": "^30.1.3",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}
