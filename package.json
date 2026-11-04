@@ -1,0 +1,23 @@
+{
+  "name": "repo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@netlify/database": "^2.0.1",
+    "@netlify/functions": "^6.0.3",
+    "@netlify/identity": "^2.0.0",
+    "openai": "^7.50.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}
